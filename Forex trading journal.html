@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Forex Trading Journal</title>
+<style>
+:root{--bg:#eef1ee;--surf:#fbfcfb;--ink:#14211d;--mute:#5d6b66;--line:#d3dbd6;--win:#0f7a55;--loss:#c2412d;--brass:#a97c1f;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0e1614;--surf:#16211e;--ink:#e6efeb;--mute:#93a39d;--line:#2a3a35;--win:#3ecf9a;--loss:#ff7a63;--brass:#e0b04a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0e1614;--surf:#16211e;--ink:#e6efeb;--mute:#93a39d;--line:#2a3a35;--win:#3ecf9a;--loss:#ff7a63;--brass:#e0b04a;color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Avenir Next","Segoe UI",system-ui,sans-serif;font-variant-numeric:tabular-nums}
+main{max-width:1060px;margin:0 auto;padding:20px 16px 48px}
+header{display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+h1{font:700 26px/1.1 "Iowan Old Style","Palatino Linotype",Georgia,serif;margin:0;letter-spacing:-.01em}
+h2{font:600 16px/1.2 "Iowan Old Style",Georgia,serif;margin:0 0 12px}
+.sub{color:var(--mute);font-size:13px;margin-top:4px}
+.panel{background:var(--surf);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+.hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.6fr);gap:16px;align-items:stretch}
+.big{font:700 clamp(40px,8vw,64px)/1 "Iowan Old Style",Georgia,serif;letter-spacing:-.02em}
+.win{color:var(--win)}.loss{color:var(--loss)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:14px}
+.stat{background:var(--surf);padding:10px 12px}
+.stat b{display:block;font-size:18px;font-weight:650}
+.stat span{color:var(--mute);font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mute)}
+input,select,button{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:8px 10px;min-height:38px;width:100%}
+button{cursor:pointer;width:auto;font-weight:600}
+button.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button.ghost{background:transparent}
+:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-top:12px}
+.preview{font-size:13px;color:var(--mute);margin-top:10px;min-height:20px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:720px}
+th{text-align:left;font-weight:600;color:var(--mute);padding:8px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td.r,th.r{text-align:right}
+.tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;border:1px solid currentColor}
+.empty{color:var(--mute);padding:20px 0;text-align:center}
+svg{width:100%;height:auto;display:block}
+@media(max-width:760px){.hero,.two{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div><h1>Forex trading journal</h1><div class="sub">Log trades. Pips, P/L, risk %, R-multiple and drawdown are calculated for you.</div></div>
+  <div class="row" style="margin:0"><button class="ghost" id="theme">Switch theme</button></div>
+</header>
+
+<section class="hero">
+  <div class="panel" style="margin:0">
+    <div class="sub">Return on starting balance</div>
+    <div class="big" id="ret">0.00%</div>
+    <div class="sub" id="bal">Balance $0.00</div>
+    <label style="margin-top:14px">Starting balance ($)<input id="start" type="number" min="0" step="any" value="10000"></label>
+  </div>
+  <div class="panel" style="margin:0">
+    <h2>Equity curve</h2>
+    <div id="chart"></div>
+  </div>
+</section>
+
+<div class="stats panel" style="padding:0;margin-top:16px" id="stats"></div>
+
+<section class="two">
+<div class="panel">
+  <h2>Log a trade</h2>
+  <form id="f" onsubmit="return false">
+  <div class="grid">
+    <label>Date<input id="date" type="date" required></label>
+    <label>Pair<input id="pair" list="pairs" value="EUR/USD" required></label>
+    <label>Direction<select id="side"><option>Buy</option><option>Sell</option></select></label>
+    <label>Lots<input id="lots" type="number" step="0.01" min="0.01" value="0.10" required></label>
+    <label>Entry<input id="entry" type="number" step="any" required></label>
+    <label>Exit<input id="exit" type="number" step="any" required></label>
+    <label>Stop loss<input id="sl" type="number" step="any" required></label>
+    <label>P/L override ($)<input id="pnl" type="number" step="any" placeholder="auto"></label>
+  </div>
+  <label style="margin-top:10px">Notes<input id="note" placeholder="Setup, mistake, lesson"></label>
+  <datalist id="pairs"><option>EUR/USD<option>GBP/USD<option>USD/JPY<option>AUD/USD<option>USD/CAD<option>USD/CHF<option>NZD/USD<option>EUR/JPY<option>GBP/JPY<option>XAU/USD</datalist>
+  <div class="preview" id="prev"></div>
+  <div class="row"><button class="primary" id="add">Add trade</button></div>
+  </form>
+</div>
+
+<div class="panel">
+  <h2>Position size calculator</h2>
+  <div class="grid">
+    <label>Account ($)<input id="c-acc" type="number" step="any" value="10000"></label>
+    <label>Risk (%)<input id="c-risk" type="number" step="any" value="1"></label>
+    <label>Pair<input id="c-pair" list="pairs" value="EUR/USD"></label>
+    <label>Stop (pips)<input id="c-sl" type="number" step="any" value="25"></label>
+    <label>Price<input id="c-px" type="number" step="any" value="1.0850"></label>
+    <label>Reward : risk<input id="c-rr" type="number" step="any" value="2"></label>
+  </div>
+  <div class="preview" id="c-out" style="color:var(--ink);font-size:14px;line-height:1.7"></div>
+</div>
+</section>
+
+<section class="panel">
+  <h2>Trade history</h2>
+  <div class="scroll" id="tbl"></div>
+</section>
+<p class="sub">P/L is estimated from pip value (about $10 per pip per lot for USD-quoted pairs, converted for JPY pairs). Type a P/L override to match your broker’s statement. Entries are saved in this browser only.</p>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+let trades=[],start=10000;
+const KEY="fxjournal-v1";
+function load(){try{const d=JSON.parse(localStorage.getItem(KEY)||"null");if(d){trades=d.t||[];start=d.s||10000}}catch(e){}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({t:trades,s:start}))}catch(e){}}
+const pipSize=p=>/JPY/i.test(p)?0.01:/XAU/i.test(p)?0.1:0.0001;
+function pipVal(p,px){return /JPY$/i.test(p)?1000/(px||150):/XAU/i.test(p)?10:10}
+function calc(o){
+  const ps=pipSize(o.pair),dir=o.side==="Buy"?1:-1;
+  const pips=dir*(o.exit-o.entry)/ps,slPips=Math.abs(o.entry-o.sl)/ps,pv=pipVal(o.pair,o.exit);
+  const est=pips*pv*o.lots,risk=slPips*pv*o.lots;
+  const pnl=(o.pnl===null||o.pnl===""||isNaN(o.pnl))?est:+o.pnl;
+  return{pips,slPips,pnl,risk};
+}
+const money=n=>(n<0?"-":"")+"$"+Math.abs(n).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const pct=n=>(n>0?"+":"")+n.toFixed(2)+"%";
+const cls=n=>n>0?"win":n<0?"loss":"";
+function enrich(){
+  let bal=start;
+  return [...trades].sort((a,b)=>a.date.localeCompare(b.date)||a.id-b.id).map(t=>{
+    const c=calc(t),before=bal;bal+=c.pnl;
+    return{...t,...c,before,after:bal,pnlPct:before?c.pnl/before*100:0,riskPct:before?c.risk/before*100:0,r:c.risk?c.pnl/c.risk:0};
+  });
+}
+function render(){
+  const rows=enrich(),n=rows.length;
+  const net=rows.reduce((a,r)=>a+r.pnl,0),bal=start+net;
+  const wins=rows.filter(r=>r.pnl>0),loss=rows.filter(r=>r.pnl<0);
+  const gw=wins.reduce((a,r)=>a+r.pnl,0),gl=Math.abs(loss.reduce((a,r)=>a+r.pnl,0));
+  let peak=start,dd=0;rows.forEach(r=>{peak=Math.max(peak,r.after);dd=Math.max(dd,(peak-r.after)/peak*100)});
+  const ret=start?net/start*100:0;
+  $("ret").textContent=pct(ret);$("ret").className="big "+cls(net);
+  $("bal").textContent="Balance "+money(bal)+" ("+money(net)+")";
+  const S=(l,v,c="")=>`<div class="stat"><b class="${c}">${v}</b><span>${l}</span></div>`;
+  $("stats").innerHTML=
+    S("Trades",n)+
+    S("Win rate",n?(wins.length/n*100).toFixed(1)+"%":"–")+
+    S("Profit factor",gl?(gw/gl).toFixed(2):n&&gw?"∞":"–")+
+    S("Total pips",rows.reduce((a,r)=>a+r.pips,0).toFixed(1),cls(net))+
+    S("Avg R",n?(rows.reduce((a,r)=>a+r.r,0)/n).toFixed(2)+"R":"–")+
+    S("Avg win",wins.length?money(gw/wins.length):"–","win")+
+    S("Avg loss",loss.length?money(-gl/loss.length):"–","loss")+
+    S("Max drawdown",dd.toFixed(2)+"%",dd>0?"loss":"");
+  chart(rows);table(rows);
+}
+function chart(rows){
+  const pts=[start,...rows.map(r=>r.after)];
+  if(pts.length<2){$("chart").innerHTML='<div class="empty">Add your first trade to see the curve.</div>';return}
+  const W=560,H=190,p=26,mn=Math.min(...pts),mx=Math.max(...pts),rg=(mx-mn)||1;
+  const x=i=>p+i*(W-2*p)/(pts.length-1),y=v=>H-p-(v-mn)/rg*(H-2*p);
+  const d=pts.map((v,i)=>(i?"L":"M")+x(i).toFixed(1)+" "+y(v).toFixed(1)).join(" ");
+  const up=pts[pts.length-1]>=start,c=up?"var(--win)":"var(--loss)";
+  $("chart").innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Equity curve">
+  <line x1="${p}" x2="${W-p}" y1="${y(start)}" y2="${y(start)}" stroke="var(--line)" stroke-dasharray="4 4"/>
+  <path d="${d}" fill="none" stroke="${c}" stroke-width="2.5" stroke-linejoin="round"/>
+  <circle cx="${x(pts.length-1)}" cy="${y(pts[pts.length-1])}" r="4" fill="${c}"/>
+  <text x="${p}" y="14" font-size="11" fill="var(--mute)">High ${money(mx)}</text>
+  <text x="${p}" y="${H-6}" font-size="11" fill="var(--mute)">Low ${money(mn)}</text></svg>`;
+}
+function table(rows){
+  if(!rows.length){$("tbl").innerHTML='<div class="empty">No trades yet. Log one above.</div>';return}
+  const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  $("tbl").innerHTML=`<table><thead><tr><th>Date</th><th>Pair</th><th>Side</th><th class="r">Lots</th><th class="r">Pips</th><th class="r">Risk %</th><th class="r">P/L</th><th class="r">P/L %</th><th class="r">R</th><th>Notes</th><th></th></tr></thead><tbody>`+
+  [...rows].reverse().map(r=>`<tr><td>${r.date}</td><td>${esc(r.pair)}</td><td><span class="tag ${r.side==="Buy"?"win":"loss"}">${r.side}</span></td><td class="r">${r.lots}</td><td class="r ${cls(r.pips)}">${r.pips.toFixed(1)}</td><td class="r">${r.riskPct.toFixed(2)}%</td><td class="r ${cls(r.pnl)}">${money(r.pnl)}</td><td class="r ${cls(r.pnl)}">${pct(r.pnlPct)}</td><td class="r ${cls(r.r)}">${r.r.toFixed(2)}R</td><td style="white-space:normal;min-width:140px">${esc(r.note||"")}</td><td><button class="ghost" data-del="${r.id}" aria-label="Delete trade">Delete</button></td></tr>`).join("")+`</tbody></table>`;
+}
+function readForm(){
+  return{pair:$("pair").value.trim().toUpperCase(),side:$("side").value,lots:+$("lots").value,entry:+$("entry").value,exit:+$("exit").value,sl:+$("sl").value,pnl:$("pnl").value===""?null:+$("pnl").value};
+}
+function preview(){
+  const o=readForm();
+  if(!(o.entry&&o.exit&&o.sl&&o.lots)){$("prev").textContent="Fill entry, exit and stop loss to preview the result.";return}
+  const c=calc(o),bal=start+enrich().reduce((a,r)=>a+r.pnl,0);
+  $("prev").innerHTML=`<b class="${cls(c.pnl)}">${c.pips.toFixed(1)} pips, ${money(c.pnl)} (${pct(c.pnl/bal*100)})</b> &nbsp; Risk ${c.slPips.toFixed(1)} pips = ${(c.risk/bal*100).toFixed(2)}% of balance &nbsp; ${c.risk?(c.pnl/c.risk).toFixed(2):"0.00"}R`;
+}
+function sizer(){
+  const a=+$("c-acc").value,r=+$("c-risk").value,sl=+$("c-sl").value,px=+$("c-px").value,rr=+$("c-rr").value,pair=$("c-pair").value.toUpperCase();
+  if(!(a&&r&&sl)){$("c-out").textContent="Enter account, risk % and stop distance.";return}
+  const risk=a*r/100,pv=pipVal(pair,px),lots=risk/(sl*pv);
+  $("c-out").innerHTML=`Risk amount: <b>${money(risk)}</b><br>Position size: <b>${lots.toFixed(2)} lots</b><br>Target at ${rr||0}R: <b class="win">${money(risk*rr)}</b> (${pct(r*rr)}), ${(sl*rr).toFixed(1)} pips`;
+}
+$("add").onclick=()=>{
+  const f=$("f");if(!f.reportValidity())return;
+  const o=readForm();
+  trades.push({id:Date.now(),date:$("date").value,note:$("note").value.trim(),...o});
+  save();["entry","exit","sl","pnl","note"].forEach(i=>$(i).value="");render();preview();
+};
+$("tbl").onclick=e=>{const id=e.target.dataset.del;if(id){trades=trades.filter(t=>t.id!=id);save();render();preview()}};
+$("start").oninput=e=>{start=+e.target.value||0;save();render();preview()};
+["pair","side","lots","entry","exit","sl","pnl"].forEach(i=>$(i).addEventListener("input",preview));
+["c-acc","c-risk","c-pair","c-sl","c-px","c-rr"].forEach(i=>$(i).addEventListener("input",sizer));
+$("theme").onclick=()=>{const r=document.documentElement,dark=r.dataset.theme?r.dataset.theme==="dark":matchMedia("(prefers-color-scheme:dark)").matches;r.dataset.theme=dark?"light":"dark"};
+$("date").value=new Date().toISOString().slice(0,10);
+load();$("start").value=start;$("c-acc").value=start;render();preview();sizer();
+</script>
+</body>
+</html>
